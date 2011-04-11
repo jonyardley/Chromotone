@@ -1,0 +1,5 @@
+CHROMOTONE (JS) v0.1
+
+Explore the universe through sound
+
+This was an idea that was explored as part of the .Astronomy 3 (2011) Hack Day in Oxford, UK. The original code was written using Processing which is not particularly web friendly so this project aims to make a version which is lighter, more efficient and has added functionality.
