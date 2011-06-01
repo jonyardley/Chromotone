@@ -8,8 +8,7 @@
 	<meta name="robots" content="" />
 	<link href="css/screen.css" media="screen" rel="stylesheet" type="text/css" />
 	<script type="text/javascript" src="js/jquery-1.5.2.min.js"></script>
-	<script type="text/javascript" src="js/audiodata.js"></script>
-	<script type="text/javascript" src="js/dsp.js"></script>
+	<script type="text/javascript" src="js/beads.js"></script>
 	<script type="text/javascript" src="js/chromotone.js"></script>
 	<script>
 		$(document).ready(function(){

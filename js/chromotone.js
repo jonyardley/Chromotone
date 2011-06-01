@@ -6,7 +6,7 @@
 	
 	Based on orignial code and idea by 
 	Jon Yardley, Chris North, Haley Gomez, Edward Gomez & 
-	Robert Howell as part of .Astronomy 2011
+	Robert Howell as part of .Astronomy 3 (2011)
 	
 	
 ------------------------------------------------------------*/
@@ -22,6 +22,10 @@ function Chromotone(input){
 	this.offset = $(this.qcontainer).offset();
 	//this.offset.top = $(this.qcontainer).position().top;
 	//this.offset.left = $(this.qcontainer).position().left;
+	this.amp = 0;
+	this.osc = 0;
+	this.g;
+	this.ac;
 	
 	this.init();
 		
@@ -47,9 +51,6 @@ Chromotone.prototype.init = function(){
 
 }
 
-var amp;
-var osc;
-
 Chromotone.prototype.mouseEvents = function(){
 	
 	var ctInstance = this;
@@ -59,9 +60,8 @@ Chromotone.prototype.mouseEvents = function(){
 		var pos = ctInstance.getCPosition(e);
 		var pixdata = ctInstance.context.getImageData(pos[0],pos[1],1,1);
 		var pix = (pixdata.data[0] + pixdata.data[1] + pixdata.data[2] / 3)/255;
-		amp = pix;
-		console.log(amp);
-		play();
+		ctInstance.amp = pix;
+		ctInstance.play(440);
 		
 		return false;
 	}).mousemove(function(e){
@@ -69,11 +69,13 @@ Chromotone.prototype.mouseEvents = function(){
 			var pos = ctInstance.getCPosition(e);
 			var pixdata = ctInstance.context.getImageData(pos[0],pos[1],1,1);
 			var pix = (pixdata.data[0] + pixdata.data[1] + pixdata.data[2] / 3)/255;
-			amp = pix;
+			if(pix > 1) pix = 1;
+			ctInstance.amp = pix;
+			ctInstance.g.setGain(ctInstance.amp);
 		}
 
 	}).mouseup(function(event){
-		this.dragging = false;
+		ctInstance.ac.stop();
 	});
 
 
@@ -94,16 +96,30 @@ Chromotone.prototype.getCPosition = function(e){
 	 
 }
 
-function play(){
-var output = new Audio();
+Chromotone.prototype.play = function(freq){
+	
+	this.ac = this.play.ac = new Beads.AudioContext();
 
-output.mozSetup(1,44100);
+	var modulator = new Beads.ugens.WavePlayer(this.ac, freq, Beads.data.Buffer.SINE);
 
-osc = new Oscillator(DSP.SIN, 100, amp, 10000, 22050);
-   osc.generate();
-   var signal = osc.signal;
+	var modUGen = Beads.extend(new Beads.UGen(this.ac, 1, 1), {
+		calculateBuffer : function() {
+		
+			for (var i = 0; i < this.bufferSize; i++) {
+				for (var j = 0; j < this.ins; j++) {
+					this.bufOut[j][i] = this.bufIn[j][i] * 10 + freq;
+				}
+			}
+		}
+	});
+	
+	modUGen.addInput(modulator);
 
+	var carrier = new Beads.ugens.WavePlayer(this.ac, modUGen, Beads.data.Buffer.SINE);
 
+	this.g = new Beads.ugens.Gain(this.ac, 1, this.amp);
+	this.g.addInput(carrier);
+	this.ac.out.addInput(this.g);
+	this.ac.start();
 
-	output.mozWriteAudio(signal);
 }
