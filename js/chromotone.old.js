@@ -16,16 +16,14 @@ function Chromotone(input){
 	this.container = input;
 	this.qcontainer = "#"+input;
 
-	this.version = "0.1";
 	this.width = $(this.qcontainer).width();
 	this.height = $(this.qcontainer).height();
 	this.offset = $(this.qcontainer).offset();
 	//this.offset.top = $(this.qcontainer).position().top;
 	//this.offset.left = $(this.qcontainer).position().left;
 	this.amp = 0;
-	this.osc = 0;
-	this.g;
-	this.ac;
+	this.g;//gain control
+	this.ac;//audio context
 	
 	this.init();
 		
@@ -71,11 +69,11 @@ Chromotone.prototype.mouseEvents = function(){
 			var pix = (pixdata.data[0] + pixdata.data[1] + pixdata.data[2] / 3)/255;
 			if(pix > 1) pix = 1;
 			ctInstance.amp = pix;
-			ctInstance.updateAmp(ctInstance.amp);
+			ctInstance.g.setGain(ctInstance.amp);
 		}
 
 	}).mouseup(function(event){
-		ctInstance.stop();
+		ctInstance.ac.stop();
 	});
 
 
@@ -97,28 +95,29 @@ Chromotone.prototype.getCPosition = function(e){
 }
 
 Chromotone.prototype.play = function(freq){
+	
+	this.ac = this.play.ac = new Beads.AudioContext();
 
-	var CI = this;
-	
-	CI.audiolet = new Audiolet();
-  CI.sine = new Sine(CI.audiolet, freq);
-  CI.gain = new Gain(CI.audiolet, CI.amp);
-  CI.sine.connect(CI.gain);
-  CI.gain.connect(CI.audiolet.output);
- 
-}
+	var modulator = new Beads.ugens.WavePlayer(this.ac, freq, Beads.data.Buffer.SINE);
 
-Chromotone.prototype.stop = function(){
-	var CI = this;
+	var modUGen = Beads.extend(new Beads.UGen(this.ac, 1, 1), {
+		calculateBuffer : function() {
+		
+			for (var i = 0; i < this.bufferSize; i++) {
+				for (var j = 0; j < this.ins; j++) {
+					this.bufOut[j][i] = this.bufIn[j][i] * 10 + freq;
+				}
+			}
+		}
+	});
 	
-	CI.audiolet.output.remove()
-}
+	modUGen.addInput(modulator);
 
-Chromotone.prototype.updateAmp = function(amp){
-	
-	var CI = this;
-	
-	CI.gain.gain.value = amp;
-	
-	
+	var carrier = new Beads.ugens.WavePlayer(this.ac, modUGen, Beads.data.Buffer.SINE);
+
+	this.g = new Beads.ugens.Gain(this.ac, 1, this.amp);
+	this.g.addInput(carrier);
+	this.ac.out.addInput(this.g);
+	this.ac.start();
+
 }
